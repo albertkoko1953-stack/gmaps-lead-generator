@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MapLeads — Google Maps Lead Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --brand: #2563eb;
+      --brand-dark: #1d4ed8;
+      --accent: #0ea5e9;
+      --surface: #0f172a;
+      --surface-2: #1e293b;
+      --surface-3: #334155;
+      --text-primary: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--surface);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    .heading {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    /* Animated gradient badge */
+    .gradient-badge {
+      background: linear-gradient(135deg, #2563eb, #0ea5e9, #7c3aed);
+      background-size: 200% 200%;
+      animation: gradientShift 4s ease infinite;
+    }
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Skeleton shimmer */
+    .skeleton {
+      background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Pulsing dot */
+    .pulse-dot {
+      width: 8px; height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(1.4); }
+    }
+
+    /* Table */
+    .leads-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+    .leads-table th {
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .leads-table td {
+      padding: 11px 14px;
+      font-size: 0.82rem;
+      border-bottom: 1px solid #1e293b;
+      vertical-align: middle;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .leads-table tr:hover td { background: #1e293b; }
+
+    /* No-website highlight */
+    .row-no-website td { background: rgba(239, 68, 68, 0.06); }
+    .row-no-website:hover td { background: rgba(239, 68, 68, 0.10) !important; }
+
+    /* Social icon pills */
+    .social-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    .social-pill:hover { opacity: 0.8; }
+    .pill-fb   { background: rgba(59,89,152,0.2); color: #5b7ec8; border: 1px solid rgba(59,89,152,0.3); }
+    .pill-ig   { background: rgba(225,48,108,0.15); color: #e1306c; border: 1px solid rgba(225,48,108,0.25); }
+    .pill-li   { background: rgba(0,119,181,0.15); color: #0e76a8; border: 1px solid rgba(0,119,181,0.25); }
+    .pill-tw   { background: rgba(29,161,242,0.12); color: #1da1f2; border: 1px solid rgba(29,161,242,0.2); }
+    .pill-yt   { background: rgba(255,0,0,0.1); color: #ff4444; border: 1px solid rgba(255,0,0,0.2); }
+    .pill-tt   { background: rgba(105,201,208,0.1); color: #69c9d0; border: 1px solid rgba(105,201,208,0.2); }
+
+    /* Stars */
+    .star-filled { color: #fbbf24; }
+    .star-empty  { color: #334155; }
+
+    /* Input focus ring */
+    input:focus { outline: none; box-shadow: 0 0 0 2px #2563eb55; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    /* Fade-in rows */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .row-animate { animation: fadeInUp 0.25s ease forwards; }
+
+    /* Chip */
+    .chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .chip-red    { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+    .chip-green  { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
+  </style>
+</head>
+<body>
+
+<!-- ─── HEADER ─────────────────────────────────────────────────────── -->
+<header class="border-b border-slate-800">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="gradient-badge w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm">M</div>
+      <span class="heading font-semibold text-white text-lg tracking-tight">MapLeads</span>
+      <span class="chip chip-green hidden sm:inline-block">Free · No API Key</span>
+    </div>
+    <div class="flex items-center gap-2 text-slate-400 text-xs">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      Playwright-powered scraper
+    </div>
+  </div>
+</header>
+
+<!-- ─── HERO ───────────────────────────────────────────────────────── -->
+<section class="max-w-7xl mx-auto px-6 pt-12 pb-8">
+  <div class="max-w-2xl">
+    <p class="text-sky-400 text-sm font-medium mb-2 tracking-wide">Google Maps Lead Generator</p>
+    <h1 class="heading text-3xl sm:text-4xl font-bold text-white leading-tight mb-3">
+      Find leads with<br/>one search.
+    </h1>
+    <p class="text-slate-400 text-sm leading-relaxed">
+      Enter a business type and city. We scrape Google Maps, then visit each website to extract emails and social profiles — all for free.
+    </p>
+  </div>
+</section>
+
+<!-- ─── SEARCH FORM ────────────────────────────────────────────────── -->
+<section class="max-w-7xl mx-auto px-6 mb-10">
+  <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-xl">
+    <div class="flex flex-col sm:flex-row gap-3">
+      <!-- Keyword -->
+      <div class="flex-1 relative">
+        <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </div>
+        <input id="keyword" type="text" placeholder="e.g. Dentists, Plumbers, Lawyers…"
+          class="w-full bg-slate-800 border border-slate-600 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 transition"/>
+      </div>
+      <!-- Location -->
+      <div class="flex-1 relative">
+        <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <input id="location" type="text" placeholder="e.g. Miami, New York, Chicago…"
+          class="w-full bg-slate-800 border border-slate-600 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 transition"/>
+      </div>
+      <!-- Limit -->
+      <div class="sm:w-36 relative">
+        <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+          </svg>
+        </div>
+        <select id="limit" class="w-full bg-slate-800 border border-slate-600 rounded-xl pl-9 pr-3 py-3 text-sm text-white appearance-none cursor-pointer">
+          <option value="10">10 results</option>
+          <option value="20" selected>20 results</option>
+          <option value="30">30 results</option>
+          <option value="40">40 results</option>
+        </select>
+      </div>
+      <!-- Submit -->
+      <button id="searchBtn" onclick="startScrape()"
+        class="sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-3 rounded-xl text-sm transition flex items-center justify-center gap-2 whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        Find Leads
+      </button>
+    </div>
+
+    <!-- Quick examples -->
+    <div class="mt-4 flex flex-wrap gap-2">
+      <span class="text-slate-500 text-xs self-center">Try:</span>
+      <button onclick="fillExample('Dentists','Miami')"
+        class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded-full border border-slate-600 transition">
+        Dentists in Miami
+      </button>
+      <button onclick="fillExample('Plumbers','Austin TX')"
+        class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded-full border border-slate-600 transition">
+        Plumbers in Austin
+      </button>
+      <button onclick="fillExample('Law Firms','New York')"
+        class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded-full border border-slate-600 transition">
+        Law Firms in NYC
+      </button>
+      <button onclick="fillExample('Restaurants','Chicago')"
+        class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded-full border border-slate-600 transition">
+        Restaurants in Chicago
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ─── LOADING STATE ──────────────────────────────────────────────── -->
+<section id="loadingSection" class="max-w-7xl mx-auto px-6 mb-8 hidden">
+  <div class="bg-slate-900 border border-slate-700 rounded-2xl p-8">
+    <div class="flex items-center gap-4 mb-6">
+      <div class="pulse-dot"></div>
+      <div>
+        <p class="text-white font-semibold text-sm" id="loadingTitle">Scraping Google Maps…</p>
+        <p class="text-slate-400 text-xs mt-0.5" id="loadingSubtitle">Opening listings and extracting business data</p>
+      </div>
+    </div>
+    <!-- Progress bar -->
+    <div class="w-full bg-slate-800 rounded-full h-1.5 mb-6">
+      <div id="progressBar" class="bg-gradient-to-r from-blue-600 to-sky-400 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+    </div>
+    <!-- Skeleton rows -->
+    <div class="space-y-3">
+      <div class="grid grid-cols-6 gap-3" id="skeletonRows"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── RESULTS ────────────────────────────────────────────────────── -->
+<section id="resultsSection" class="max-w-7xl mx-auto px-6 mb-12 hidden">
+  <!-- Stats bar -->
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+    <div class="flex items-center gap-4">
+      <div>
+        <span class="text-white font-semibold text-lg" id="resultCount">0</span>
+        <span class="text-slate-400 text-sm ml-1">leads found</span>
+      </div>
+      <div class="h-5 w-px bg-slate-700"></div>
+      <div>
+        <span class="text-red-400 font-semibold" id="noWebsiteCount">0</span>
+        <span class="text-slate-400 text-sm ml-1">no website</span>
+      </div>
+      <div class="h-5 w-px bg-slate-700"></div>
+      <div>
+        <span class="text-green-400 font-semibold" id="emailCount">0</span>
+        <span class="text-slate-400 text-sm ml-1">emails found</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Filter -->
+      <select id="filterSelect" onchange="filterResults()" class="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2 cursor-pointer">
+        <option value="all">All leads</option>
+        <option value="no-website">No website only</option>
+        <option value="has-email">Has email</option>
+        <option value="has-social">Has social media</option>
+      </select>
+      <!-- Download -->
+      <button onclick="downloadCSV()"
+        class="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Download CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="flex flex-wrap items-center gap-4 mb-3 text-xs text-slate-500">
+    <div class="flex items-center gap-2">
+      <div class="w-3 h-3 rounded bg-red-900/40 border border-red-700/30"></div>
+      <span>No website — high-intent web design lead</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="w-3 h-3 rounded bg-slate-800 border border-slate-600"></div>
+      <span>Has website</span>
+    </div>
+  </div>
+
+  <!-- Table wrapper -->
+  <div class="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="leads-table">
+        <thead>
+          <tr>
+            <th class="text-left">#</th>
+            <th class="text-left">Business</th>
+            <th class="text-left">Category</th>
+            <th class="text-left">Rating</th>
+            <th class="text-left">Phone</th>
+            <th class="text-left">Address</th>
+            <th class="text-left">Website</th>
+            <th class="text-left">Email</th>
+            <th class="text-left">Social Media</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyState" class="hidden py-16 text-center">
+      <p class="text-slate-500 text-sm">No results match your filter.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── ERROR ──────────────────────────────────────────────────────── -->
+<div id="errorBanner" class="max-w-7xl mx-auto px-6 mb-8 hidden">
+  <div class="bg-red-950 border border-red-800 rounded-xl p-4 flex items-start gap-3">
+    <svg class="w-5 h-5 text-red-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <div>
+      <p class="text-red-300 font-semibold text-sm">Scraping failed</p>
+      <p class="text-red-400/80 text-xs mt-1" id="errorMessage">An unexpected error occurred.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  let allResults = [];
+
+  function fillExample(kw, loc) {
+    document.getElementById('keyword').value = kw;
+    document.getElementById('location').value = loc;
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorBanner');
+    document.getElementById('errorMessage').textContent = msg;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 8000);
+  }
+
+  function setProgress(pct) {
+    document.getElementById('progressBar').style.width = pct + '%';
+  }
+
+  function buildSkeletons() {
+    const container = document.getElementById('skeletonRows');
+    container.innerHTML = '';
+    for (let i = 0; i < 5; i++) {
+      const row = document.createElement('div');
+      row.className = 'contents';
+      row.innerHTML = `
+        <div class="col-span-2 h-5 skeleton"></div>
+        <div class="col-span-1 h-5 skeleton"></div>
+        <div class="col-span-1 h-5 skeleton"></div>
+        <div class="col-span-1 h-5 skeleton"></div>
+        <div class="col-span-1 h-5 skeleton"></div>
+      `;
+      container.appendChild(row);
+    }
+  }
+
+  function starsHtml(rating) {
+    if (!rating) return '<span class="text-slate-600 text-xs">—</span>';
+    const num = parseFloat(rating);
+    let html = `<span class="text-yellow-400 font-semibold text-xs mr-1">${rating}</span>`;
+    for (let i = 1; i <= 5; i++) {
+      html += i <= Math.round(num)
+        ? '<span class="star-filled text-xs">★</span>'
+        : '<span class="star-empty text-xs">★</span>';
+    }
+    return html;
+  }
+
+  function socialHtml(socials) {
+    if (!socials) return '—';
+    const icons = {
+      facebook:  ['fb',  'fb', 'pill-fb',  'f'],
+      instagram: ['ig',  'ig', 'pill-ig',  '◈'],
+      linkedin:  ['li',  'li', 'pill-li',  'in'],
+      twitter:   ['tw',  'tw', 'pill-tw',  '✕'],
+      youtube:   ['yt',  'yt', 'pill-yt',  '▶'],
+      tiktok:    ['tt',  'tt', 'pill-tt',  '♪'],
+    };
+    const svgIcons = {
+      facebook:  '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>',
+      instagram: '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg>',
+      linkedin:  '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>',
+      twitter:   '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
+      youtube:   '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 00-1.95 1.96A29 29 0 001 12a29 29 0 00.46 5.58A2.78 2.78 0 003.41 19.54C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.96A29 29 0 0023 12a29 29 0 00-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z"/></svg>',
+      tiktok:    '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.79 1.53V6.78a4.85 4.85 0 01-1.02-.09z"/></svg>',
+    };
+    const pillClasses = { facebook: 'pill-fb', instagram: 'pill-ig', linkedin: 'pill-li', twitter: 'pill-tw', youtube: 'pill-yt', tiktok: 'pill-tt' };
+    const labels = { facebook: 'FB', instagram: 'IG', linkedin: 'LI', twitter: '𝕏', youtube: 'YT', tiktok: 'TT' };
+
+    let parts = [];
+    for (const [platform, url] of Object.entries(socials)) {
+      if (url) {
+        parts.push(
+          `<a href="${url}" target="_blank" rel="noopener" class="social-pill ${pillClasses[platform]}" title="${platform}">
+            ${svgIcons[platform] || ''}
+            <span>${labels[platform]}</span>
+          </a>`
+        );
+      }
+    }
+    return parts.length ? `<div class="flex flex-wrap gap-1">${parts.join('')}</div>` : '<span class="text-slate-600 text-xs">—</span>';
+  }
+
+  function renderResults(data) {
+    const body = document.getElementById('resultsBody');
+    body.innerHTML = '';
+
+    if (!data.length) {
+      document.getElementById('emptyState').classList.remove('hidden');
+      return;
+    }
+    document.getElementById('emptyState').classList.add('hidden');
+
+    data.forEach((r, i) => {
+      const hasWebsite = !!(r.website && r.website.trim());
+      const tr = document.createElement('tr');
+      tr.className = `row-animate ${!hasWebsite ? 'row-no-website' : ''}`;
+      tr.style.animationDelay = `${i * 30}ms`;
+      tr.dataset.hasWebsite = hasWebsite;
+      tr.dataset.hasEmail = !!(r.email);
+      tr.dataset.hasSocial = !!(r.socials && Object.values(r.socials).some(v => v));
+
+      const websiteCell = hasWebsite
+        ? `<a href="${r.website}" target="_blank" rel="noopener"
+             class="text-blue-400 hover:text-blue-300 hover:underline truncate block max-w-[160px]"
+             title="${r.website}">
+             ${new URL(r.website).hostname.replace('www.','')}
+           </a>`
+        : `<span class="chip chip-red">No Website</span>`;
+
+      const emailCell = r.email
+        ? `<a href="mailto:${r.email}" class="text-sky-400 hover:underline text-xs truncate block max-w-[160px]" title="${r.email}">${r.email}</a>`
+        : '<span class="text-slate-600 text-xs">—</span>';
+
+      tr.innerHTML = `
+        <td class="text-slate-500 text-xs w-8">${i+1}</td>
+        <td>
+          <div class="font-medium text-white text-xs leading-tight">${r.name || '—'}</div>
+        </td>
+        <td class="text-slate-400 text-xs">${r.category || '—'}</td>
+        <td>${starsHtml(r.rating)}</td>
+        <td class="text-slate-300 text-xs">${r.phone || '<span class="text-slate-600">—</span>'}</td>
+        <td class="text-slate-400 text-xs">${r.address || '<span class="text-slate-600">—</span>'}</td>
+        <td>${websiteCell}</td>
+        <td>${emailCell}</td>
+        <td>${socialHtml(r.socials)}</td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  function filterResults() {
+    const filter = document.getElementById('filterSelect').value;
+    const rows = document.querySelectorAll('#resultsBody tr');
+    let visible = 0;
+    rows.forEach(row => {
+      let show = true;
+      if (filter === 'no-website') show = row.dataset.hasWebsite === 'false';
+      if (filter === 'has-email')   show = row.dataset.hasEmail === 'true';
+      if (filter === 'has-social')  show = row.dataset.hasSocial === 'true';
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    document.getElementById('emptyState').classList.toggle('hidden', visible > 0);
+  }
+
+  async function startScrape() {
+    const keyword  = document.getElementById('keyword').value.trim();
+    const location = document.getElementById('location').value.trim();
+    const limit    = document.getElementById('limit').value;
+
+    if (!keyword || !location) {
+      showError('Please enter both a keyword and a location.');
+      return;
+    }
+
+    // Reset UI
+    document.getElementById('resultsSection').classList.add('hidden');
+    document.getElementById('errorBanner').classList.add('hidden');
+    document.getElementById('loadingSection').classList.remove('hidden');
+    document.getElementById('searchBtn').disabled = true;
+    buildSkeletons();
+    setProgress(10);
+
+    // Animate progress during wait
+    const steps = [
+      [1500,  25, 'Scraping Google Maps listings…', 'Opening business cards one by one'],
+      [3500,  45, 'Extracting business details…',  'Reading names, phones, addresses'],
+      [6000,  65, 'Visiting business websites…',   'Looking for emails and social links'],
+      [9000,  80, 'Enriching contact data…',       'Scraping contact pages'],
+      [12000, 92, 'Almost done…',                  'Finishing enrichment'],
+    ];
+    const timers = steps.map(([delay, pct, title, sub]) =>
+      setTimeout(() => {
+        setProgress(pct);
+        document.getElementById('loadingTitle').textContent = title;
+        document.getElementById('loadingSubtitle').textContent = sub;
+      }, delay)
+    );
+
+    try {
+      const res = await fetch('/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword, location, limit: parseInt(limit) }),
+      });
+      const json = await res.json();
+      timers.forEach(clearTimeout);
+      setProgress(100);
+
+      if (!res.ok || json.error) throw new Error(json.error || 'Unknown error');
+
+      allResults = json.results || [];
+
+      // Update stats
+      document.getElementById('resultCount').textContent = allResults.length;
+      document.getElementById('noWebsiteCount').textContent =
+        allResults.filter(r => !(r.website && r.website.trim())).length;
+      document.getElementById('emailCount').textContent =
+        allResults.filter(r => r.email).length;
+
+      renderResults(allResults);
+
+      setTimeout(() => {
+        document.getElementById('loadingSection').classList.add('hidden');
+        document.getElementById('resultsSection').classList.remove('hidden');
+      }, 400);
+
+    } catch (err) {
+      timers.forEach(clearTimeout);
+      document.getElementById('loadingSection').classList.add('hidden');
+      showError(err.message || 'Scraping failed. Ensure Playwright is installed and running.');
+    } finally {
+      document.getElementById('searchBtn').disabled = false;
+    }
+  }
+
+  async function downloadCSV() {
+    if (!allResults.length) return;
+    const res = await fetch('/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ results: allResults }),
+    });
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), { href: url, download: 'leads.csv' });
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Allow Enter key to submit
+  ['keyword','location'].forEach(id =>
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') startScrape();
+    })
+  );
+</script>
+</body>
+</html>
